@@ -68,7 +68,7 @@ namespace Node
 				Task<HttpResponseMessage> response;
 				while (true)
 				{
-					response = client.PostAsync("api/node/newNode", new StringContent(Port.ToString(), Encoding.UTF8, "application/json"));
+					response = client.PostAsync("api/node/", new StringContent(Port.ToString(), Encoding.UTF8, "application/json"));
 					if (response.Result.StatusCode == HttpStatusCode.OK)
 						break;
 					Console.WriteLine("Register status code " + response.Result.StatusCode);

@@ -14,32 +14,31 @@ namespace Node
     public class ValuesController : ApiController
 	{
 		[HttpGet]
-		[Route("get/{id}")]
-        public string Get(string id)
-        {
-            return Node.Data[id];
-        }
+        public HttpResponseMessage Get(string id)
+		{
+			Console.WriteLine("[GET] " + id);
+			return Node.Data.ContainsKey(id) ? 
+				Request.CreateResponse(HttpStatusCode.OK, Node.Data[id]) : 
+				Request.CreateResponse(HttpStatusCode.BadRequest, "[ERROR] Данный ключ отсутствует в словаре.");
+		}
 
 		[HttpPost]
-		[Route("post")]
         public HttpResponseMessage Put(Record record)
         {
-			Console.WriteLine("GOT CALL TO POST " + JsonConvert.SerializeObject(record));
+			Console.WriteLine("[POST] " + JsonConvert.SerializeObject(record));
 	        if (!Node.Data.ContainsKey(record.key))
-	        {
 		        Node.Data.Add(record.key, record.value);
-	        }
             else
-            {
                 Node.Data[record.key] = record.value;
-            }
+
 	        foreach (var replica in Storage.Replicas)
 	        {
 		        using (var client = new HttpClient() { BaseAddress = new Uri("http://" + replica + "/") })
 		        {
 			        var response = client.PostAsync("api/values/post/", new StringContent(JsonConvert.SerializeObject(record), Encoding.UTF8, "application/json"));
-					Console.WriteLine("Sended post request to replica " + client.BaseAddress);
-					Console.WriteLine(response.Result.StatusCode + ": " + response.Result.Content.ReadAsStringAsync().Result);
+					Console.WriteLine("Sended [POST] request to replica " + client.BaseAddress);
+					if (response.Result.StatusCode != HttpStatusCode.OK)
+						Console.WriteLine(response.Result.StatusCode + ": " + response.Result.Content.ReadAsStringAsync().Result);
 		        }
 	        }
 
@@ -48,18 +47,22 @@ namespace Node
 		}
 
 		[HttpDelete]
-		[Route("delete/{id}")]
         public HttpResponseMessage Delete(string id)
-        {
-            if (Node.Data.ContainsKey(id))
-            {
+		{
+			Console.WriteLine("[DELETE] " + id);
+			if (Node.Data.ContainsKey(id))
                 Node.Data.Remove(id);
-            }
+            else
+	            return Request.CreateResponse(HttpStatusCode.BadRequest, "[ERROR] Данный ключ отсутствует в словаре.");
+
 	        foreach (var replica in Storage.Replicas)
 			{
 				using (var client = new HttpClient() { BaseAddress = new Uri("http://" + replica + "/") })
 				{
 					var response = client.DeleteAsync("delete/" + id);
+					Console.WriteLine("Sended [DELETE] request to replica " + client.BaseAddress);
+					if (response.Result.StatusCode != HttpStatusCode.OK)
+						Console.WriteLine(response.Result.StatusCode + ": " + response.Result.Content.ReadAsStringAsync().Result);
 				}
 	        }
 

@@ -16,18 +16,18 @@ namespace Node
 	public class NodeController : ApiController
 	{
 		[HttpPost]
-		[Route("newNode")]
 		public HttpResponseMessage RegisterNewReplica([FromBody]string port, HttpRequestMessage request)
 		{
 			var ip = GetClientIp(request);
 			if (ip == "127.0.0.1" || ip == "::1")
 				ip = "localhost";
-			Storage.Replicas.Add(ip + ":" + port);
+			var replicaAddress = ip + ":" + port;
+			Console.WriteLine("Registered new replica at " + replicaAddress);
+			Storage.Replicas.Add(replicaAddress);
 			return Request.CreateResponse(HttpStatusCode.OK);
 		}
 
 		[HttpGet]
-		[Route("getReplicas")]
 		public string GetAllRespicas()
 		{
 			var answer = "";

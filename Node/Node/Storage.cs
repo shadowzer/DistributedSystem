@@ -10,6 +10,6 @@ namespace Node
 	{
 		public static string MasterIP;
 		public static string FilePath;
-		public static List<string> Replicas = new List<string>();
+		public static HashSet<string> Replicas = new HashSet<string>();
 	}
 }
