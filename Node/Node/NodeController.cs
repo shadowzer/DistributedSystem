@@ -28,14 +28,9 @@ namespace Node
 		}
 
 		[HttpGet]
-		public string GetAllRespicas()
+		public HttpResponseMessage GetRecordsCount()
 		{
-			var answer = "";
-			foreach (var replica in Storage.Replicas)
-			{
-				answer += replica + ", ";
-			}
-			return answer.Substring(0, answer.Length - 2);
+			return Request.CreateResponse(HttpStatusCode.OK, Node.Data.Count);
 		}
 
 		private string GetClientIp(HttpRequestMessage request)

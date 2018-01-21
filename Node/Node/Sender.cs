@@ -40,16 +40,11 @@ namespace Node
         public void Delete(string key)
         {
             var result = new HttpClient().DeleteAsync(baseAddress + key).Result;
-
         }
 
-		public static async Task<HttpResponseMessage> PostAsync(HttpClient client, string method)
+		public static async Task<HttpResponseMessage> PostAsync(HttpClient client, string method, string message)
 		{
-			return await client.PostAsync(method, null); //, new StringContent(message, Encoding.UTF8, "application/json"));
+			return await client.PostAsync(method, new StringContent(message, Encoding.UTF8, "application/json"));
 		}
-	    public static async Task<HttpResponseMessage> DeleteAsync(HttpClient client, string method)
-	    {
-		    return await client.DeleteAsync(method);
-	    }
 	}
 }
