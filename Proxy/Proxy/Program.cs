@@ -18,7 +18,8 @@ namespace Proxy
 			using (WebApp.Start<Startup>(url: "http://localhost:" + port + "/"))
 			{
 				Console.WriteLine("Proxy started on port " + port);
-				while (true) { }
+				Console.WriteLine("Press [ENTER] to close app.");
+				Console.ReadLine();
 			}
 		}
 	}

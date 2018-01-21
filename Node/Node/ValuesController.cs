@@ -23,19 +23,19 @@ namespace Node
 		}
 
 		[HttpPost]
-        public HttpResponseMessage Put(Record record)
+        public HttpResponseMessage Put(string id, [FromBody]string value)
         {
-			Console.WriteLine("[POST] " + JsonConvert.SerializeObject(record));
-	        if (!Node.Data.ContainsKey(record.key))
-		        Node.Data.Add(record.key, record.value);
+	        Console.WriteLine("[POST] " + id + ": " + value);
+			if (!Node.Data.ContainsKey(id))
+		        Node.Data.Add(id, value);
             else
-                Node.Data[record.key] = record.value;
+                Node.Data[id] = value;
 
 	        foreach (var replica in Storage.Replicas)
 	        {
 		        using (var client = new HttpClient() { BaseAddress = new Uri("http://" + replica + "/") })
 		        {
-			        var response = client.PostAsync("api/values/post/", new StringContent(JsonConvert.SerializeObject(record), Encoding.UTF8, "application/json"));
+			        var response = client.PostAsync("api/values/" + id, new StringContent(value, Encoding.UTF8, "application/json"));
 					Console.WriteLine("Sended [POST] request to replica " + client.BaseAddress);
 					if (response.Result.StatusCode != HttpStatusCode.OK)
 						Console.WriteLine(response.Result.StatusCode + ": " + response.Result.Content.ReadAsStringAsync().Result);

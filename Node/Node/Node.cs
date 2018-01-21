@@ -26,7 +26,8 @@ namespace Node
 			{
 				Console.WriteLine("Node started on port " + Port);
 				RegisterNode();
-				while (true) { }
+				Console.WriteLine("Press [ENTER] to close app.");
+				Console.ReadLine();
 			}
 		}
 
@@ -81,6 +82,7 @@ namespace Node
 				}
 				else
 				{
+					Number = -1; // -1 means replica
 					Console.WriteLine("Node was registered as replica.");
 				}
 			}
