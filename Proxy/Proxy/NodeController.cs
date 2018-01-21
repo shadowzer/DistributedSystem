@@ -15,15 +15,35 @@ namespace Proxy
 	public class NodeController : ApiController
 	{
 		[HttpPost]
-		public HttpResponseMessage RegisterNewNode([FromBody]string port, HttpRequestMessage request)
+		public HttpResponseMessage RegisterNewNode([FromBody] string port, HttpRequestMessage request)
 		{
-			var ip = GetClientIp(request);
-			if (ip == "127.0.0.1" || ip == "::1")
-				ip = "localhost";
+			var ip = Sender.GetClientIp(request);
 			var nodeAddress = ip + ":" + port;
 			Console.WriteLine("Registered new node at " + nodeAddress);
-			Storage.Nodes.Add(nodeAddress);
-			return request.CreateResponse(HttpStatusCode.OK, Storage.N++);
+			Storage.Nodes.Add(Storage.Nodes.Count, nodeAddress);
+
+
+			Storage.SystemStatus = "resharding";
+			// todo resharding
+			foreach (var entry in Storage.Nodes)
+			{
+				if (entry.Key != Storage.Nodes.Count - 1)
+				{
+					using (var client = new HttpClient() {BaseAddress = new Uri("http://" + entry.Value + "/")})
+					{
+						var response = Sender.GetAsync(client, "api/resharding/" + Storage.Nodes.Count);
+						if (response.Result.IsSuccessStatusCode)
+							Console.WriteLine("Node " + entry.Key + " at " + entry.Value + " successfully resharded.\n--------------------");
+						else
+							Console.WriteLine("Node " + entry.Key + " at " + entry.Value + " failed while resharding: " +
+							                  response.Result.StatusCode + "\n" + response.Result.Content.ReadAsStringAsync().Result +
+											  "\n--------------------");
+					}
+				}
+			}
+			Storage.SystemStatus = "ready";
+
+			return request.CreateResponse(HttpStatusCode.OK, Storage.Nodes.Count - 1);
 		}
 
 		[HttpGet]
@@ -35,53 +55,6 @@ namespace Proxy
 				answer += node + ", ";
 			}
 			return answer.Substring(0, answer.Length - 2);
-		}
-
-		private string GetClientIp(HttpRequestMessage request)
-		{
-			const string HttpContext = "MS_HttpContext";
-			const string RemoteEndpointMessage =
-				"System.ServiceModel.Channels.RemoteEndpointMessageProperty";
-			const string OwinContext = "MS_OwinContext";
-			// Web-hosting
-			if (request.Properties.ContainsKey(HttpContext))
-			{
-				HttpContextWrapper ctx =
-					(HttpContextWrapper)request.Properties[HttpContext];
-				if (ctx != null)
-				{
-					return ctx.Request.UserHostAddress;
-				}
-			}
-
-			// Self-hosting
-			if (request.Properties.ContainsKey(RemoteEndpointMessage))
-			{
-				RemoteEndpointMessageProperty remoteEndpoint =
-					(RemoteEndpointMessageProperty)request.Properties[RemoteEndpointMessage];
-				if (remoteEndpoint != null)
-				{
-					return remoteEndpoint.Address;
-				}
-			}
-
-			// Self-hosting using Owin
-			if (request.Properties.ContainsKey(OwinContext))
-			{
-				OwinContext owinContext = (OwinContext)request.Properties[OwinContext];
-				if (owinContext != null)
-				{
-					return owinContext.Request.RemoteIpAddress;
-				}
-			}
-			Console.WriteLine("NULL");
-			return null;
-		}
-
-		public string Get(string id)
-		{
-			Console.WriteLine("TEST");
-			return id;
 		}
 	}
 }

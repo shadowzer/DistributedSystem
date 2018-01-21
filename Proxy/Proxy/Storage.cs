@@ -8,7 +8,7 @@ namespace Proxy
 {
 	public static class Storage
 	{
-		public static int N { get; set; }
-		public static HashSet<string> Nodes = new HashSet<string>();
+		public static Dictionary<int, string> Nodes = new Dictionary<int, string>();
+		public static string SystemStatus { get; set; }
 	}
 }

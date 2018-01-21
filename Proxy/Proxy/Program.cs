@@ -14,9 +14,9 @@ namespace Proxy
 			int port = 10000;
 			if (args.Length > 0)
 				port = int.Parse(args[0]);
-			Storage.N = 0;
 			using (WebApp.Start<Startup>(url: "http://localhost:" + port + "/"))
 			{
+				Storage.SystemStatus = "ready";
 				Console.WriteLine("Proxy started on port " + port);
 				Console.WriteLine("Press [ENTER] to close app.");
 				Console.ReadLine();
