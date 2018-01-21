@@ -9,5 +9,6 @@ namespace Proxy
 	public static class Storage
 	{
 		public static int N { get; set; }
+		public static HashSet<string> Nodes = new HashSet<string>();
 	}
 }

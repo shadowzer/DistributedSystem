@@ -15,16 +15,27 @@ namespace Proxy
 	public class NodeController : ApiController
 	{
 		[HttpPost]
-		[Route("newNode")]
 		public HttpResponseMessage RegisterNewNode([FromBody]string port, HttpRequestMessage request)
 		{
 			var ip = GetClientIp(request);
 			if (ip == "127.0.0.1" || ip == "::1")
 				ip = "localhost";
-			Console.WriteLine(ip + ":" + port);
+			var nodeAddress = ip + ":" + port;
+			Console.WriteLine("Registered new node at " + nodeAddress);
+			Storage.Nodes.Add(nodeAddress);
 			return request.CreateResponse(HttpStatusCode.OK, Storage.N++);
 		}
-		
+
+		[HttpGet]
+		public string GetAllNodes()
+		{
+			var answer = "";
+			foreach (var node in Storage.Nodes)
+			{
+				answer += node + ", ";
+			}
+			return answer.Substring(0, answer.Length - 2);
+		}
 
 		private string GetClientIp(HttpRequestMessage request)
 		{
