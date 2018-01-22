@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http;
 using System.ServiceModel.Channels;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
@@ -22,9 +23,23 @@ namespace Node
 			if (ip == "127.0.0.1" || ip == "::1")
 				ip = "localhost";
 			var replicaAddress = ip + ":" + port;
+			SendDataToReplica(replicaAddress);
 			Console.WriteLine("Registered new replica at " + replicaAddress);
 			Storage.Replicas.Add(replicaAddress);
 			return Request.CreateResponse(HttpStatusCode.OK);
+		}
+
+		private void SendDataToReplica(string address)
+		{
+			using (var client = new HttpClient() {BaseAddress = new Uri("http://" + address + "/")})
+			{
+				Console.WriteLine("Copying data to replica [" + Node.Data.Count + " records].");
+				foreach (var entry in Node.Data)
+				{
+					var response = Sender.PostAsync(client, "api/values/" + entry.Key, entry.Value);
+					Thread.Sleep(5);
+				}
+			}
 		}
 
 		[HttpGet]

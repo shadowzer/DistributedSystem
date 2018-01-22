@@ -16,7 +16,6 @@ namespace Node
 		[HttpGet]
 		public HttpResponseMessage Get(int id)
 		{
-			Console.WriteLine("[GET] " + id);
 			return Node.Data.ContainsKey(id)
 				? Request.CreateResponse(HttpStatusCode.OK, Node.Data[id])
 				: Request.CreateResponse(HttpStatusCode.NotFound, "[ERROR] Данный ключ отсутствует в словаре.");
@@ -36,7 +35,6 @@ namespace Node
 				using (var client = new HttpClient() {BaseAddress = new Uri("http://" + replica + "/")})
 				{
 					var response = client.PostAsync("api/values/" + id, new StringContent(value, Encoding.UTF8, "application/json"));
-					Console.WriteLine("Sended [POST] request to replica " + client.BaseAddress);
 					if (response.Result.StatusCode != HttpStatusCode.OK)
 						Console.WriteLine(response.Result.StatusCode + ": " + response.Result.Content.ReadAsStringAsync().Result);
 				}
@@ -58,8 +56,7 @@ namespace Node
 			{
 				using (var client = new HttpClient() {BaseAddress = new Uri("http://" + replica + "/")})
 				{
-					var response = client.DeleteAsync("delete/" + id);
-					Console.WriteLine("Sended [DELETE] request to replica " + client.BaseAddress);
+					var response = client.DeleteAsync("api/values/" + id);
 					if (response.Result.StatusCode != HttpStatusCode.OK)
 						Console.WriteLine(response.Result.StatusCode + ": " + response.Result.Content.ReadAsStringAsync().Result);
 				}
