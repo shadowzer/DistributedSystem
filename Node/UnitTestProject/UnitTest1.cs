@@ -8,6 +8,8 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Newtonsoft.Json;
+using Node;
 
 namespace UnitTestProject
 {
@@ -17,41 +19,56 @@ namespace UnitTestProject
 		[TestMethod]
 		public void MainTest()
 		{
-			var slaves = new string[] {"8090", "8091"};
-			ClearData();
-			StartProxy("10000");
+			var processes = new List<Process>();
+			try
+			{
+				var masterWithReplicas = new string[] {"8080", "8090", "8091"};
+				ClearData();
+				processes.Add(StartProxy("10000"));
 
-			// simple DB + replication
-			StartMasterNode("8080");
-			StartSlaves(slaves);
-			FillData("8080", 100, 0, 200);
-			CheckMasterNodeData("8080", 100);
-			CheckSlaveNodesData(slaves, 100);
-			UpdateData("8080", 1000);
-			CheckMasterNodeData("8080", 1000);
-			CheckSlaveNodesData(slaves, 1000);
-			Delete0KeyAndCheckFor404("8080");
+				// simple DB + replication
+				processes.Add(StartNode("8080", "10000")); // master 0
+				processes.Add(StartNode("8090", "8080")); // replica 0
+				processes.Add(StartNode("8091", "8080")); // replica 1
+				FillData("8080", 100, 0, 200);
+				foreach (var node in masterWithReplicas)
+				{
+					CheckNodeData(node, 100);
+				}
+				FillData("8080", 1000, 0, 200); // update
+				foreach (var node in masterWithReplicas)
+				{
+					CheckNodeData(node, 1000);
+				}
+				Delete0KeyAndCheckFor404("8080");
 
-			// resharding
-			StartMasterNode("8081");
-			CheckUniformDistributionData(new string[] {"8080", "8081"});
-			FillData("10000", 100, 200, 320);
-			StartMasterNode("8082");
-			StartMasterNode("8083");
-			CheckUniformDistributionData(new string[] {"8080", "8081", "8082", "8083"});
+				// resharding
+				processes.Add(StartNode("8081", "10000"));
+				Assert.IsTrue(CheckUniformDistributionData(new string[] {"8080", "8081"}));
+				FillData("10000", 100, 200, 280);
+				processes.Add(StartNode("8082", "10000"));
+				processes.Add(StartNode("8083", "10000"));
+				Assert.IsTrue(CheckUniformDistributionData(new string[] {"8080", "8081", "8082", "8083"}));
+			}
+			finally
+			{
+				foreach (var process in processes)
+				{
+					process.Kill();
+				}
+			}
 		}
 
 		public void ClearData()
 		{
 			var path = @"nodes\";
-			for (var port = 8080; port < 8090; ++port)
+			for (var port = 8080; port < 8092; ++port)
 			{
-				//File.Create(path + port + ".txt");
 				File.WriteAllText(path + port + ".txt", "");
 			}
 		}
 
-		public void StartProxy(string port)
+		public Process StartProxy(string port)
 		{
 			ProcessStartInfo info = new ProcessStartInfo("Proxy.exe")
 			{
@@ -59,22 +76,16 @@ namespace UnitTestProject
 				Verb = "runas",
 				Arguments = port
 			};
-			Process.Start(info);
+			var process = Process.Start(info);
 			Thread.Sleep(1000);
+			return process;
 		}
 
-		public void StartMasterNode(string port)
+		public Process StartNode(string port, string masterPort)
 		{
-			Process.Start("Node.exe", port + " http://localhost:10000");
+			var process = Process.Start("Node.exe", port + " http://localhost:" + masterPort);
 			Thread.Sleep(3000);
-		}
-
-		public void StartSlaves(string[] ports)
-		{
-			foreach (var port in ports)
-			{
-				Process.Start("Node.exe", port + " http://localhost:8080");
-			}
+			return process;
 		}
 
 		public void FillData(string port, int addend, int from, int to)
@@ -83,45 +94,24 @@ namespace UnitTestProject
 			{
 				for (var i = from; i < to; i++)
 				{
-					client.PostAsync("api/values/" + i, new StringContent((addend + i).ToString(), Encoding.UTF8, "application/json"));
+					//client.PostAsync("api/values/" + i, new StringContent((addend + i).ToString(), Encoding.UTF8, "application/json"));
+					var response = Sender.PostAsync(client, "api/values/" + i, (addend + i).ToString());
+					Thread.Sleep(10);
 				}
 			}
+			Thread.Sleep(500);
 		}
 
-		public void CheckMasterNodeData(string port, int addend)
+		public void CheckNodeData(string port, int addend)
 		{
 			using (var client = new HttpClient() {BaseAddress = new Uri("http://localhost:" + port + "/")})
 			{
 				for (var i = 0; i < 200; i++)
 				{
-					var response = client.GetAsync("api/values/" + i);
-					Assert.AreEqual(addend + i, int.Parse(response.Result.Content.ReadAsStringAsync().Result));
-				}
-			}
-		}
-
-		public void CheckSlaveNodesData(string[] ports, int addend)
-		{
-			foreach (var port in ports)
-			{
-				using (var client = new HttpClient() {BaseAddress = new Uri("http://localhost:" + port + "/")})
-				{
-					for (var i = 0; i < 200; i++)
-					{
-						var response = client.GetAsync("api/values/" + i);
-						Assert.AreEqual(addend + i, int.Parse(response.Result.Content.ReadAsStringAsync().Result));
-					}
-				}
-			}
-		}
-
-		public void UpdateData(string port, int addend)
-		{
-			using (var client = new HttpClient() {BaseAddress = new Uri("http://localhost:" + port + "/")})
-			{
-				for (var i = 0; i < 200; i++)
-				{
-					client.PostAsync("api/values/" + i, new StringContent((addend + i).ToString(), Encoding.UTF8, "application/json"));
+					var response = Sender.GetAsync(client, "api/values/" + i);
+					Thread.Sleep(5);
+					var result = JsonConvert.DeserializeObject(response.Result.Content.ReadAsStringAsync().Result, typeof(string));
+					Assert.AreEqual((addend + i).ToString(), result);
 				}
 			}
 		}
@@ -130,8 +120,10 @@ namespace UnitTestProject
 		{
 			using (var client = new HttpClient() {BaseAddress = new Uri("http://localhost:" + port + "/")})
 			{
-				client.DeleteAsync("api/values/0");
-				var response = client.GetAsync("api/values/0");
+				var response = Sender.DeleteAsync(client, "api/values/0");
+				Thread.Sleep(5);
+				response = Sender.GetAsync(client, "api/values/0");
+				Thread.Sleep(5);
 				Assert.AreEqual(HttpStatusCode.NotFound, response.Result.StatusCode);
 			}
 		}
