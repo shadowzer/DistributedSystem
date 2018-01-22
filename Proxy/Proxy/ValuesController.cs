@@ -18,7 +18,7 @@ namespace Proxy
 			var key = id % Storage.Nodes.Count;
 			using (var client = new HttpClient() {BaseAddress = new Uri(Storage.Nodes[key] + "/")})
 			{
-				var response = client.GetAsync("api/values/" + id);
+				var response = Sender.GetAsync(client, "api/values/" + id);
 				if (response.Result.StatusCode == HttpStatusCode.OK)
 					return Request.CreateResponse(HttpStatusCode.OK, response.Result.Content.ReadAsStringAsync().Result);
 			}
@@ -27,7 +27,7 @@ namespace Proxy
 				key = id % (Storage.Nodes.Count - 1);
 				using (var client = new HttpClient() { BaseAddress = new Uri(Storage.Nodes[key] + "/") })
 				{
-					var response = client.GetAsync("api/values/" + id);
+					var response = Sender.GetAsync(client, "api/values/" + id);
 					return Request.CreateResponse(HttpStatusCode.OK, response.Result.Content.ReadAsStringAsync().Result);
 				}
 			}
@@ -41,7 +41,7 @@ namespace Proxy
 			var key = id % Storage.Nodes.Count;
 			using (var client = new HttpClient() { BaseAddress = new Uri("http://" + Storage.Nodes[key] + "/") })
 			{
-				var response = client.PostAsync("api/values/" + id, new StringContent(value, Encoding.UTF8, "application/json"));
+				var response = Sender.PostAsync(client, "api/values/" + id, value);
 				if (response.Result.StatusCode == HttpStatusCode.OK)
 					return Request.CreateResponse(HttpStatusCode.OK, response.Result.Content.ReadAsStringAsync().Result);
 			}
@@ -50,7 +50,7 @@ namespace Proxy
 				key = id % (Storage.Nodes.Count - 1);
 				using (var client = new HttpClient() { BaseAddress = new Uri("http://" + Storage.Nodes[key] + "/") })
 				{
-					var response = client.PostAsync("api/values/" + id, new StringContent(value, Encoding.UTF8, "application/json"));
+					var response = Sender.PostAsync(client, "api/values/" + id, value);
 					return Request.CreateResponse(response.Result.StatusCode, response.Result.Content.ReadAsStringAsync().Result);
 				}
 			}
@@ -64,7 +64,7 @@ namespace Proxy
 			var key = id % Storage.Nodes.Count;
 			using (var client = new HttpClient() { BaseAddress = new Uri("http://" + Storage.Nodes[key] + "/") })
 			{
-				var response = client.DeleteAsync("api/values/" + id);
+				var response = Sender.DeleteAsync(client, "api/values/" + id);
 				if (response.Result.StatusCode == HttpStatusCode.OK)
 					return Request.CreateResponse(HttpStatusCode.OK, response.Result.Content.ReadAsStringAsync().Result);
 			}
@@ -73,7 +73,7 @@ namespace Proxy
 				key = id % (Storage.Nodes.Count - 1);
 				using (var client = new HttpClient() { BaseAddress = new Uri("http://" + Storage.Nodes[key] + "/") })
 				{
-					var response = client.DeleteAsync("api/values/" + id);
+					var response = Sender.DeleteAsync(client, "api/values/" + id);
 					return Request.CreateResponse(response.Result.StatusCode, response.Result.Content.ReadAsStringAsync().Result);
 				}
 			}

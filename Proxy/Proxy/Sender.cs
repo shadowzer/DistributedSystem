@@ -21,6 +21,10 @@ namespace Proxy
 		{
 			return await client.GetAsync(method);
 		}
+		public static async Task<HttpResponseMessage> DeleteAsync(HttpClient client, string method)
+		{
+			return await client.DeleteAsync(method);
+		}
 
 		public static string GetClientIp(HttpRequestMessage request)
 		{
